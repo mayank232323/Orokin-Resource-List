@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Warframe Resource Codex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07080b;
+    --panel:#0e1117;
+    --panel-hover:#141925;
+    --line:#222732;
+    --line-soft:#1a1e27;
+    --orange:#ff6a1a;
+    --cyan:#49d9ff;
+    --text-hi:#eef0f3;
+    --text-mid:#a6acb8;
+    --text-dim:#5b6270;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text-hi);
+    font-family:'Rajdhani',sans-serif;
+    font-weight:500;
+    min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* ambient scanline texture */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    z-index:2;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(73,217,255,0.05), transparent 60%);
+    z-index:1;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .scan-sweep{
+      position:fixed;
+      left:0; right:0; height:140px;
+      background:linear-gradient(to bottom, transparent, rgba(73,217,255,0.035), transparent);
+      animation:sweep 9s linear infinite;
+      pointer-events:none;
+      z-index:1;
+    }
+    @keyframes sweep{
+      0%{top:-140px;}
+      100%{top:100vh;}
+    }
+    .blink{animation:blinkdot 1.6s ease-in-out infinite;}
+    @keyframes blinkdot{0%,100%{opacity:1;}50%{opacity:0.25;}}
+  }
+
+  .wrap{
+    position:relative;
+    z-index:3;
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 1.5rem 4rem;
+  }
+
+  /* top status bar */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0.9rem 0;
+    border-bottom:1px solid var(--line);
+    font-family:'Space Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    color:var(--text-dim);
+    flex-wrap:wrap;
+    gap:0.5rem;
+  }
+  .topbar .id{color:var(--text-mid);}
+  .status{display:flex;align-items:center;gap:0.5rem;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);}
+
+  /* hero */
+  .hero{padding:3rem 0 2rem;text-align:left;}
+  .hero h1{
+    font-family:'Orbitron',sans-serif;
+    font-weight:900;
+    font-size:clamp(1.9rem,5vw,3.1rem);
+    letter-spacing:0.02em;
+    margin:0 0 0.6rem;
+    color:var(--text-hi);
+    text-shadow:0 0 22px rgba(255,106,26,0.25), 0 0 2px rgba(73,217,255,0.25);
+    line-height:1.05;
+  }
+  .hero h1 span{color:var(--orange);}
+  .hero p{
+    font-size:1.02rem;
+    color:var(--text-mid);
+    max-width:620px;
+    margin:0;
+    line-height:1.5;
+  }
+  .hero p strong{color:var(--cyan);font-weight:600;}
+
+  /* search */
+  .search-panel{
+    margin-top:2rem;
+    border:1px solid var(--line);
+    background:var(--panel);
+    padding:1.1rem 1.2rem;
+    position:relative;
+  }
+  .search-row{
+    display:flex;
+    align-items:center;
+    gap:0.7rem;
+    font-family:'Space Mono',monospace;
+  }
+  .search-row .prompt{
+    color:var(--cyan);
+    font-size:0.95rem;
+    flex-shrink:0;
+  }
+  .search-row input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text-hi);
+    font-family:'Space Mono',monospace;
+    font-size:1rem;
+    letter-spacing:0.02em;
+    caret-color:var(--orange);
+  }
+  .search-row input::placeholder{color:var(--text-dim);}
+  .clear-btn{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    font-family:'Space Mono',monospace;
+    font-size:0.75rem;
+    padding:0.25rem 0.55rem;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .clear-btn:hover{color:var(--orange);border-color:var(--orange);}
+  .clear-btn:focus-visible, input:focus-visible, .chip:focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:2px;
+  }
+
+  .chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5rem;
+    margin-top:1rem;
+  }
+  .chip{
+    font-family:'Space Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.06em;
+    color:var(--text-mid);
+    background:transparent;
+    border:1px solid var(--line);
+    padding:0.4rem 0.7rem;
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .chip:hover{color:var(--text-hi);border-color:var(--text-mid);}
+  .chip.active{
+    color:var(--bg);
+    background:var(--cyan);
+    border-color:var(--cyan);
+    font-weight:700;
+  }
+
+  .readout{
+    margin-top:1rem;
+    font-family:'Space Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    color:var(--text-dim);
+  }
+  .readout b{color:var(--orange);}
+
+  /* grid */
+  .grid{
+    margin-top:1.6rem;
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(290px, 1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .card{
+    position:relative;
+    background:var(--panel);
+    padding:1.1rem 1.2rem 1.2rem;
+    transition:background .15s;
+  }
+  .card:hover{background:var(--panel-hover);}
+  .corner{position:absolute;width:11px;height:11px;pointer-events:none;opacity:0;transition:opacity .15s;}
+  .card:hover .corner{opacity:1;}
+  .corner.tl{top:-1px;left:-1px;border-top:2px solid var(--orange);border-left:2px solid var(--orange);}
+  .corner.tr{top:-1px;right:-1px;border-top:2px solid var(--orange);border-right:2px solid var(--orange);}
+  .corner.bl{bottom:-1px;left:-1px;border-bottom:2px solid var(--orange);border-left:2px solid var(--orange);}
+  .corner.br{bottom:-1px;right:-1px;border-bottom:2px solid var(--orange);border-right:2px solid var(--orange);}
+
+  .card .tag{
+    font-family:'Space Mono',monospace;
+    font-size:0.62rem;
+    letter-spacing:0.1em;
+    color:var(--cyan);
+    display:inline-block;
+    margin-bottom:0.5rem;
+  }
+  .card h3{
+    font-family:'Rajdhani',sans-serif;
+    font-weight:700;
+    font-size:1.12rem;
+    margin:0 0 0.55rem;
+    color:var(--text-hi);
+    line-height:1.25;
+  }
+  .card mark{background:rgba(255,106,26,0.32);color:var(--text-hi);padding:0 1px;}
+  .field{display:flex;gap:0.5rem;margin-bottom:0.3rem;font-size:0.86rem;line-height:1.4;}
+  .field .l{
+    flex-shrink:0;
+    width:92px;
+    font-family:'Space Mono',monospace;
+    font-size:0.64rem;
+    letter-spacing:0.05em;
+    color:var(--text-dim);
+    padding-top:0.15rem;
+  }
+  .field .v{color:var(--text-mid);}
+  .protip{
+    margin-top:0.6rem;
+    padding-top:0.6rem;
+    border-top:1px solid var(--line-soft);
+    font-size:0.82rem;
+    font-style:italic;
+    color:#c7cad1;
+    line-height:1.45;
+  }
+  .protip b{color:var(--cyan);font-style:normal;}
+
+  .empty{
+    grid-column:1/-1;
+    background:var(--panel);
+    padding:3rem 1.5rem;
+    text-align:center;
+    font-family:'Space Mono',monospace;
+    color:var(--text-dim);
+    font-size:0.85rem;
+    letter-spacing:0.04em;
+  }
+  .empty b{color:var(--orange);}
+
+  /* tips section */
+  .manual{margin-top:3.5rem;}
+  .manual h2{
+    font-family:'Orbitron',sans-serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--text-hi);
+    border-bottom:1px solid var(--line);
+    padding-bottom:0.8rem;
+    letter-spacing:0.02em;
+  }
+  .manual h2 span{color:var(--cyan);}
+  .tips-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(320px,1fr));
+    gap:1.2rem 2rem;
+    margin-top:1.3rem;
+  }
+  .tip h4{
+    margin:0 0 0.3rem;
+    font-size:0.95rem;
+    color:var(--orange);
+    font-weight:700;
+  }
+  .tip p{margin:0;font-size:0.85rem;color:var(--text-mid);line-height:1.5;}
+
+  footer{
+    margin-top:3.5rem;
+    padding-top:1.2rem;
+    border-top:1px solid var(--line);
+    font-family:'Space Mono',monospace;
+    font-size:0.68rem;
+    color:var(--text-dim);
+    letter-spacing:0.05em;
+    text-align:center;
+  }
+
+  @media (max-width:560px){
+    .field .l{width:78px;font-size:0.6rem;}
+    .hero{padding-top:2rem;}
+  }
+</style>
+</head>
+<body>
+<div class="scan-sweep"></div>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="id">// CEPHALON ARCHIVE — RESOURCE DIVISION</span>
+    <span class="status"><span class="dot blink"></span> LINK STATUS: ONLINE</span>
+  </div>
+
+  <div class="hero">
+    <h1>WARFRAME RESOURCE <span>CODEX</span></h1>
+    <p>Search the star chart. <strong>60 resources</strong> indexed with their best planets, nodes, mission types,
+      and field-tested pro-tips. Type to query, or filter by zone.</p>
+  </div>
+
+  <div class="search-panel">
+    <div class="search-row">
+      <span class="prompt">&gt;</span>
+      <input id="searchInput" type="text" placeholder="query resource, planet, node, or tactic..." autocomplete="off" spellcheck="false">
+      <button class="clear-btn" id="clearBtn" type="button">CLEAR ✕</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="manual">
+    <h2>FIELD MANUAL <span>// OPTIMIZATION PROTOCOLS</span></h2>
+    <div class="tips-grid" id="tipsGrid"></div>
+  </div>
+
+  <footer>WARFRAME RESOURCE CODEX — UNOFFICIAL FAN REFERENCE — DATA SUBJECT TO PATCH CHANGES</footer>
+</div>
+
+<script>
+const RESOURCES = [
+{n:"Alloy Plate",p:"Ceres, Sedna",no:"Draco (Ceres), Amarna (Sedna), Gabii (Ceres)",m:"Survival / Dark Sector Survival",t:"Grineer armor units drop this in huge quantities. Bring a Desecrate Nekros for extra rolls off heavy corpses.",tag:"STARCHART"},
+{n:"Antiserum Injector Fragment",p:"Eris",no:"Oestrus (Eris), Kala-azar (Eris)",m:"Infested Salvage / Defense",t:"Bring a high-efficiency speed-killing frame to keep enemy drop pools moving rapidly.",tag:"STARCHART"},
+{n:"Argon Crystal",p:"Void",no:"Hepit (Void), Mot (Void), Teshub (Void)",m:"Capture / Survival / Exterminate",t:"Run Hepit fast with a max-range Xaku/Limbo to nuke breakable crates. Decays 24 hours after pickup, so don't over-farm.",tag:"VOID"},
+{n:"Asterite / Titanium",p:"Saturn Proxima, Veil Proxima",no:"Kasio's Rest (Saturn Proxima), Flexa (Veil Proxima)",m:"Free-Flight / Skirmish",t:"After clearing fighters, ram your Railjack into asteroid fields and blast rocks with forward artillery.",tag:"RAILJACK"},
+{n:"Aucrux Capacitors / Ticor Plate",p:"Veil Proxima",no:"Gian Point (Veil Proxima), Ruse War Field (Veil Proxima)",m:"Skirmish",t:"Drop mainly from destroyed crewships — have a tactical crew member snap-kill them with Forward Artillery.",tag:"RAILJACK"},
+{n:"Aya",p:"Void",no:"Ukko (Void), Cetus / Fortuna / Necralisk Bounties",m:"Speedrun Capture / Tier 5 Bounties",t:null,tag:"VOID"},
+{n:"Breath of the Eidolon / Grokdrul / Iradite",p:"Earth",no:"Plains of Eidolon (Earth)",m:"Open World Exploration / Konzu Bounties",t:"Enter a Tier 5 bounty map and ignore the objective — container yields are ~5x higher than low-level free roam.",tag:"OPENWORLD"},
+{n:"Carbides / Cubic Diodes",p:"Ceres - Star Chart, Europa - Star Chart",no:"Draco (Ceres - Star Chart), Larunda (Europa - Star Chart)",m:"Star Chart Survival / Exterminate",t:"Despite being Railjack resources, regular infantry on Ceres/Europa drop them at much higher rates.",tag:"STARCHART"},
+{n:"Cetus Wisp",p:"Earth",no:"Plains of Eidolon (Earth)",m:"Lake Shoreline Sprint",t:"Max Loot Radar mods, enter at night, and Archwing-loop the edges of Gara Toht Lake to grab glowing markers.",tag:"OPENWORLD"},
+{n:"Circuits",p:"Ceres",no:"Draco (Ceres), Gabii (Ceres), Exta (Ceres)",m:"Survival / Dark Sector Survival / Assassination",t:"Draco's dense Grineer spawn waves maximize resource-per-minute for looting setups.",tag:"STARCHART"},
+{n:"Control Module",p:"Void, Railjack",no:"Mot (Void), Hepit (Void), Neptune Proxima (Railjack)",m:"Survival / Capture",t:"Drops in very high quantities; a single 20-minute Mot survival can fill your inventory.",tag:"VOID"},
+{n:"Cryotic",p:"Pluto, Earth, Europa",no:"Hieracon (Pluto), Tikal (Earth), Cholistan (Europa)",m:"Dark Sector Excavation",t:"Bring Frost, Gara, or Limbo to protect multiple drills. Leave at ~1,200-1,300 Cryotic and restart to manage enemy scaling.",tag:"STARCHART"},
+{n:"Detonite Ampule",p:"Ceres, Saturn",no:"Draco (Ceres), Titan (Saturn), Piscinas (Saturn)",m:"Survival / Dark Sector Survival",t:"Drops passively in big batches while farming Orokin Cells on the same nodes.",tag:"STARCHART"},
+{n:"Diluted Thermia",p:"Venus, Orb Vallis",no:"Orb Vallis (Venus), Deck 12 (Orb Vallis)",m:"Thermia Fractures World Event / Exploiter Orb Fight",t:"Save Thermia Fracture events for bulk farming, and break the canisters near vents during the world event for fast stacks.",tag:"OPENWORLD"},
+{n:"Endo",p:"Sedna, Pluto",no:"Vodyanoi (Sedna), Hieracon (Pluto), Arbitrations",m:"Arena (Nekros/Khora squad) / Excavation Rotation A",t:null,tag:"STARCHART"},
+{n:"Entrati Lanthorn",p:"Zariman, Deimos",no:"Halako Perimeter (Zariman), Albrecht's Laboratories (Deimos)",m:"Exterminate / Cavia Bounties",t:"Use a max-range crate-breaking frame (Xaku) at Halako, or deploy a Distilling Extractor at Zariman for passive gains.",tag:"ZARIMAN"},
+{n:"Entrati Obols",p:"Deimos",no:"Albrecht's Laboratories (Deimos), Sanctum Anatomica (Deimos)",m:"Exterminate / Survival / Cavia Bounties",t:"Run Cavia bounties back-to-back — Obols are a guaranteed bounty-completion reward on top of normal drops.",tag:"DEIMOS"},
+{n:"Fass / Vome Residue",p:"Deimos",no:"Cambion Drift (Deimos)",m:"Surface Harvesting / Isolation Vault Bounties",t:"Collect residue pools right after a Fass or Vome duel ends, before the Drift's day/night state flips again.",tag:"DEIMOS"},
+{n:"Ferrite",p:"Earth, Mercury",no:"Tikal (Earth), Apollodorus (Mercury), M Prime (Earth)",m:"Dark Sector Excavation / Survival / Capture",t:"High baseline drop rate on starter planets makes stockpiling easy early on.",tag:"STARCHART"},
+{n:"Fieldron Sample",p:"Jupiter, Venus",no:"Io (Jupiter), Romula (Venus), Tessera (Venus)",m:"Defense / Dark Sector Defense",t:"Io concentrates massive Corpus infantry numbers onto a tiny defense tile.",tag:"STARCHART"},
+{n:"Gallium",p:"Mars, Uranus",no:"Wahiba (Mars), Ophelia (Uranus), Ara (Mars)",m:"Dark Sector Survival / Survival / Capture",t:"Abuse the innate 30%+ drop multiplier on Wahiba's Infested, or hunt Grineer on Ophelia.",tag:"STARCHART"},
+{n:"Gallos Rods",p:"Saturn Proxima",no:"Gara Crater (Saturn Proxima), Numa Comet (Saturn Proxima)",m:"Skirmish",t:"Farm alongside Asterite/Titanium — nuke the same asteroid fields for a combined haul.",tag:"RAILJACK"},
+{n:"Hexenon",p:"Jupiter",no:"Cameria (Jupiter), Ganymede (Jupiter), Io (Jupiter)",m:"Dark Sector Survival / Disruption / Defense",t:"Ganymede Disruption is efficient if your squad can kill Demolishers quickly — boosted drop rates.",tag:"STARCHART"},
+{n:"Isos",p:"Earth Proxima",no:"Lu-An (Earth Proxima), Er-Phryxe (Earth Proxima)",m:"Skirmish",t:"Clear fighters first, then mop up Crewships for the bulk of your Isos drops.",tag:"RAILJACK"},
+{n:"Kavat Genetic Code",p:"Deimos",no:"Horend (Deimos), Terrorem (Deimos)",m:"Capture / Survival",t:"Enter solo with an invisible frame (Loki/Ivara/Ash) and scan Feral Kavats before they're disturbed.",tag:"DEIMOS"},
+{n:"Komms",p:"Earth Proxima",no:"Korm's Belt (Earth Proxima), Jabu Coast (Earth Proxima)",m:"Skirmish",t:"Use a dedicated gunner to pop turret emplacements quickly — they drop Komms reliably.",tag:"RAILJACK"},
+{n:"Kullervo's Bane / Pathos Clamp",p:"Duviri",no:"Duviri Landscape, The Circuit (Duviri)",m:"Orowyrm Boss Fight / Lone Story",t:"Pathos Clamps drop from the Orowyrm fight (10 normal / 15 Steel Path). Speedrun Lone Story to reach the boss faster.",tag:"DUVIRI"},
+{n:"Kuva",p:"Kuva Fortress",no:"Taveuni (Kuva Fortress), Garus (Kuva Fortress)",m:"Kuva Survival / Dark Sector Survival",t:"Use Kuva Siphons during survival, or buy bundles with Vitus Essence from the Arbiters of Hexis relay vendor.",tag:"STARCHART"},
+{n:"Lucent Teroglobe",p:"Deimos",no:"Albrecht's Laboratories (Deimos), Sanctum Anatomica (Deimos)",m:"Alchemy / Exterminate / Cavia Bounties",t:"Break Vitrific Outcrops during Alchemy runs — they reliably crack open Lucent Teroglobes.",tag:"DEIMOS"},
+{n:"Mapricot",p:"Earth",no:"Plains of Eidolon (Earth), Cetus (Earth)",m:"Coastal Ridge Tree Harvesting / Low-Tier Bounties",t:"Stick to the coastal ridge tree clusters; low-tier bounties keep you near them without distractions.",tag:"OPENWORLD"},
+{n:"Morphics",p:"Mars, Phobos",no:"Wahiba (Mars), Stickney (Phobos), Iliad (Phobos)",m:"Dark Sector Survival / Survival / Assassination",t:"Phobos nodes have dense environmental lockers/boxes; smashing containers yields fast Morphics.",tag:"STARCHART"},
+{n:"Mutagen Sample",p:"Deimos, Eris",no:"Terrorem (Deimos), Hyf (Deimos), H Prime (Eris)",m:"Dark Sector Survival / Defense / Survival",t:"Farm in a full 4-player squad to force max Infested spawn rates for Hema research.",tag:"DEIMOS"},
+{n:"Nano Spores",p:"Deimos, Saturn, Eris",no:"Terrorem (Deimos), Piscinas (Saturn), Akkad (Eris)",m:"Dark Sector Survival / Dark Sector Defense",t:"Accumulates naturally just from open-world bounties and standard Deimos missions.",tag:"DEIMOS"},
+{n:"Narmer Isoplast",p:"Earth, Venus",no:"Cetus (Earth), Fortuna (Venus)",m:"Post-New War Narmer Bounties",t:"Prioritize Narmer-specific bounty tiers, since regular Konzu/Eudico bounties don't drop this at all.",tag:"OPENWORLD"},
+{n:"Necracoil",p:"Deimos",no:"Albrecht's Laboratories (Deimos), Sanctum Anatomica (Deimos)",m:"Infinite Alchemy / Netracell Runs",t:"Infinite Alchemy lets you keep re-rolling Necramech-tagged rooms for repeated Necracoil chances in one run.",tag:"DEIMOS"},
+{n:"Neural Sensor",p:"Jupiter",no:"Cameria (Jupiter), Io (Jupiter), Themisto (Jupiter)",m:"Dark Sector Survival / Defense / Assassination",t:"Run Io with a Speed Nova to funnel Corpus into looting domes, or speedrun Alad V on Themisto.",tag:"STARCHART"},
+{n:"Neurodes",p:"Earth, Deimos",no:"Tikal (Earth), Terrorem (Deimos), Magnacidium (Deimos)",m:"Dark Sector Excavation / Dark Sector Survival / Assassination",t:"Speedrun Magnacidium and kill Lephantis — each head rolls its own drop chance.",tag:"DEIMOS"},
+{n:"Nistlepod",p:"Earth",no:"Plains of Eidolon (Earth), Cetus (Earth)",m:"Northern Mountain Ridge Harvesting / Tier 2 Bounties",t:"Stay on the northern mountain ridge plant clusters; Tier 2 bounties route you past them naturally.",tag:"OPENWORLD"},
+{n:"Nitain Extract",p:"—",no:"Nightwave Store, Cetus / Fortuna",m:"Cred Offerings / Ghoul Purge Event Caches",t:null,tag:"STARCHART"},
+{n:"Nullstones",p:"Veil Proxima",no:"Ruse War Field (Veil Proxima), H-2 Cloud (Veil Proxima)",m:"Skirmish",t:"Veil Proxima crewships and radiator destruction are the most consistent source of Nullstones.",tag:"RAILJACK"},
+{n:"Orokin Cell",p:"Ceres, Saturn",no:"Gabii (Ceres), Piscinas (Saturn), Tethys (Saturn)",m:"Dark Sector Survival / Assassination",t:"High-Slash weapons on Gabii let Desecrate treat severed limbs as separate corpses, doubling chances.",tag:"STARCHART"},
+{n:"Oxium",p:"Jupiter, Neptune, Europa",no:"Io (Jupiter), Galatea (Neptune), Baal (Europa)",m:"Defense / Capture / Exterminate",t:"Kill Oxium Drones before their self-destruct dive bomb; use burst damage on Io or Galatea.",tag:"STARCHART"},
+{n:"Plastids",p:"Uranus, Pluto, Saturn",no:"Ophelia (Uranus), Palus (Pluto), Piscinas (Saturn)",m:"Survival / Dark Sector Survival",t:"Alternative: Cambion Drift (Deimos) open world — pop orange Infested cysts with a wide-range frame.",tag:"STARCHART"},
+{n:"Polymer Bundle",p:"Uranus, Mercury",no:"Assur (Uranus), Ophelia (Uranus), Apollodorus (Mercury)",m:"Dark Sector Survival / Survival",t:"A coordinated Nekros + Khora squad on Assur/Ophelia farms this alongside Plastids simultaneously.",tag:"STARCHART"},
+{n:"Pyrol",p:"Earth",no:"Plains of Eidolon (Earth)",m:"Cave Interior Mining / General Surface Mining",t:"Mine the glowing red veins inside caves specifically — surface rocks yield far less Pyrol per swing.",tag:"OPENWORLD"},
+{n:"Riven Sliver",p:"Earth",no:"Any Steel Path Incursion node, Iron Wake (Earth)",m:"Eximus Farming / Weekly Paladino Exchange",t:null,tag:"STARCHART"},
+{n:"Rubedo",p:"Void, Phobos",no:"Mot (Void), Zeugma (Phobos), Hepit (Void)",m:"Survival / Dark Sector Survival / Capture",t:"Smash large environmental deposits while hunting Argon Crystals in the Void rather than target-farming.",tag:"VOID"},
+{n:"Rune Marrow",p:"Duviri Undercroft",no:"The Circuit (Duviri Undercroft), Duviri Landscape",m:"Undercroft Missions / Portal Challenges",t:"Break the small cylindrical containers scattered through Undercroft rooms rather than fighting every enemy.",tag:"DUVIRI"},
+{n:"Salvage",p:"Mars, Jupiter",no:"Wahiba (Mars), Cameria (Jupiter), Alator (Mars)",m:"Dark Sector Survival / Interception",t:"A camping squad in a tight dead-end room on Wahiba can net tens of thousands in under 20 minutes.",tag:"STARCHART"},
+{n:"Somatic Fibers",p:"Lua, Phobos",no:"Apollo (Lua), Zeugma (Phobos)",m:"Disruption / Dark Sector Survival",t:"Dropped by Demolisher units on Apollo — bring high single-target damage (Mesa, Titania) to shred them fast.",tag:"STARCHART"},
+{n:"Stela",p:"Deimos",no:"Albrecht's Laboratories (Deimos), Sanctum Anatomica (Deimos)",m:"Mirror Defense / Murmur Looting / Cavia Bounties",t:"Loot downed Murmur Sarcophages during Mirror Defense waves for a steady trickle of Stela.",tag:"DEIMOS"},
+{n:"Techrot Chitin",p:"Höllvania / 1999",no:"Hell Scrub (Höllvania / 1999)",m:"1999 Survival",t:"Bring AoE explosives to detonate Techrot Caches; use the Orokin Eye support ability to ping hidden drops.",tag:"OPENWORLD"},
+{n:"Tellurium",p:"Uranus, Neptune",no:"Ophelia (Uranus), Caelus (Uranus), Salacia (Neptune)",m:"Submersible Survival / Archwing Interception / Mobile Defense",t:"Ophelia's land enemies share the Archwing drop pool — farmable entirely on foot.",tag:"STARCHART"},
+{n:"Thrax Plasm",p:"Zariman",no:"Halako Perimeter (Zariman), Tuvul Commons (Zariman)",m:"Exterminate / Mobile Defense",t:"Target Thrax Centurions specifically — regular Zariman fauna drop Plasm far less often.",tag:"ZARIMAN"},
+{n:"Toroids (Vega / Calda / Sola)",p:"Orb Vallis",no:"Spaceport / Enrichment Labs / Temple of Profit (Orb Vallis)",m:"Continuous Base-Defense",t:"Let Corpus drop Reinforcement Beacons and let the alert hit Max (4 stars) so high-tier units keep dropping Toroids.",tag:"OPENWORLD"},
+{n:"Vainthorn",p:"Earth / Pluto / Ceres",no:"Abyssal Zone (Earth / Pluto / Ceres)",m:"Specialized Syndicate Mission",t:"Requires Abyssal Beacons from the Syndicate console; clear rescue objectives quickly for best hourly return.",tag:"STARCHART"},
+{n:"Vessel Capillaries",p:"Deimos",no:"Albrecht's Laboratories (Deimos), Sanctum Anatomica (Deimos)",m:"Disruption / Netracell Vaults",t:"Necramech Demolishers in Disruption are the most reliable source — focus them down first each wave.",tag:"DEIMOS"},
+{n:"Void Traces",p:"Railjack Proxima",no:"Any Void Fissure node, Void Storms (Railjack Proxima)",m:"Public Fissure Runs / Higher-Yield Space Missions",t:null,tag:"VOID"},
+{n:"Voidgel Orb",p:"Zariman",no:"Halako Perimeter (Zariman), Chrysalith (Zariman)",m:"Exterminate / Zariman Bounties",t:"Break the silver Voidgel deposits specifically; they're visually distinct from regular Zariman containers.",tag:"ZARIMAN"},
+{n:"Volatile Motes",p:"Railjack",no:"Uranus Nodes, Uranus Proxima (Railjack)",m:"Ascension Missions / Event Operations",t:"Mostly tied to limited-time Ascension/event missions — farm them in bulk while the event is active.",tag:"RAILJACK"}
+];
+
+const TIPS = [
+["Host Full Squads","Enemy spawn rates scale with player count. Farm in a 4-player squad via Recruitment chat."],
+["Abuse Booster Multipliers","Resource Boosters and Resource Drop Chance Boosters stack multiplicatively. Only one squad member needs the Drop Chance booster (lobby-wide)."],
+["Run Steel Path","Gives a permanent +100% Resource Drop Chance and +100% Mod Drop Chance on every node."],
+["Deploy Extractors","Use the Star Chart or mobile app to deploy Titan/Distilling Extractors on planets you're not playing."],
+["Bring High-Slash Weapons","Nekros's Desecrate treats severed limbs as separate corpses — high-Slash weapons (e.g. Orthos Prime) multiply loot rolls."],
+["Beast Companion Mods","Kavats/Kubrows with Resourceful/Loyal Retriever add up to 18% chance for double resources."],
+["Camp Dead-End Rooms","In endless missions, funnel enemies into a tight dead-end room with Khora's Pilfering Strangledome for centralized loot."],
+["Stack Looter Frames","Pairing Nekros (Desecrate) with Khora (Pilfering Strangledome) or Hydroid (Pilfering Swarm) in the same squad lets multiple loot-boosting abilities roll on the same corpse pool at once."],
+["Use Smeeta Kavat's Charm","The Charm buff has a chance to double resource pickups for a short window — bring one as your companion for passive bonus drops on top of any Retriever mods."],
+["Sell Prime Junk for Plat, Reinvest in Boosters","Trade unneeded Prime parts for platinum and use it to buy Resource Boosters during double XP/Credit weekends, when drop bonuses often overlap for compounded gains."],
+["Track Baro Ki'Teer","Some boosters and Riven-related farming aids are only sold by Baro Ki'Teer on his bi-weekly visits — check the in-game alert tab so you don't miss a restock."],
+["Tip to Optimize Even More","Combine a Steel Path node, a 4-player squad, a Resource Drop Chance Booster, and a Desecrate/Pilfering loot frame all at once — these effects stack on top of each other, turning even an average farming node into one of the highest-yield routes in the game."]
+];
+
+const CATEGORIES = [
+  {key:"ALL", label:"ALL"},
+  {key:"VOID", label:"VOID"},
+  {key:"RAILJACK", label:"RAILJACK"},
+  {key:"DEIMOS", label:"DEIMOS"},
+  {key:"OPENWORLD", label:"OPEN WORLD"},
+  {key:"ZARIMAN", label:"ZARIMAN / DUVIRI"},
+  {key:"DUVIRI", label:"ZARIMAN / DUVIRI"},
+  {key:"STARCHART", label:"STAR CHART"}
+];
+// de-dupe by label for chip rendering
+const CHIP_DEFS = [
+  {key:"ALL", label:"ALL"},
+  {key:"VOID", label:"VOID"},
+  {key:"RAILJACK", label:"RAILJACK"},
+  {key:"DEIMOS", label:"DEIMOS"},
+  {key:"OPENWORLD", label:"OPEN WORLD"},
+  {key:"ZARIMAN_DUVIRI", label:"ZARIMAN / DUVIRI"},
+  {key:"STARCHART", label:"STAR CHART"}
+];
+
+let activeChip = "ALL";
+let query = "";
+
+const chipsEl = document.getElementById("chips");
+const gridEl = document.getElementById("grid");
+const readoutEl = document.getElementById("readout");
+const searchInput = document.getElementById("searchInput");
+const clearBtn = document.getElementById("clearBtn");
+const tipsGrid = document.getElementById("tipsGrid");
+
+function escapeHtml(str){
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function highlight(text, q){
+  const safe = escapeHtml(text);
+  if(!q) return safe;
+  const esc = q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const re = new RegExp(esc, "ig");
+  return safe.replace(re, m => "<mark>"+m+"</mark>");
+}
+
+function matchesChip(r){
+  if(activeChip === "ALL") return true;
+  if(activeChip === "ZARIMAN_DUVIRI") return r.tag === "ZARIMAN" || r.tag === "DUVIRI";
+  return r.tag === activeChip;
+}
+
+function matchesQuery(r){
+  if(!query) return true;
+  const q = query.toLowerCase();
+  return (r.n + " " + r.p + " " + r.no + " " + r.m + " " + (r.t||"")).toLowerCase().includes(q);
+}
+
+function render(){
+  const q = query.trim();
+  const results = RESOURCES.filter(r => matchesChip(r) && matchesQuery(r));
+
+  readoutEl.innerHTML = "DISPLAYING <b>"+results.length+"</b> / "+RESOURCES.length+" ENTRIES"+(q ? "  —  QUERY: \""+escapeHtml(q)+"\"" : "");
+
+  if(results.length === 0){
+    gridEl.innerHTML = '<div class="empty">NO MATCHING ENTRIES — <b>CEPHALON</b> SUGGESTS REFINING YOUR QUERY OR CLEARING FILTERS</div>';
+    return;
+  }
+
+  gridEl.innerHTML = results.map(r => `
+    <div class="card">
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <span class="tag">◆ ${r.tag.replace('STARCHART','STAR CHART').replace('OPENWORLD','OPEN WORLD')}</span>
+      <h3>${highlight(r.n, q)}</h3>
+      <div class="field"><span class="l">PLANETS</span><span class="v">${highlight(r.p, q)}</span></div>
+      <div class="field"><span class="l">NODES</span><span class="v">${highlight(r.no, q)}</span></div>
+      <div class="field"><span class="l">MISSION</span><span class="v">${highlight(r.m, q)}</span></div>
+      ${r.t ? `<div class="protip"><b>Pro-Tip:</b> ${highlight(r.t, q)}</div>` : ``}
+    </div>
+  `).join("");
+}
+
+function renderChips(){
+  chipsEl.innerHTML = CHIP_DEFS.map(c => `<button class="chip ${ (activeChip===c.key || (c.key==='ZARIMAN_DUVIRI' && (activeChip==='ZARIMAN'||activeChip==='DUVIRI'))) ? 'active':''}" data-key="${c.key}" type="button">${c.label}</button>`).join("");
+  chipsEl.querySelectorAll(".chip").forEach(btn => {
+    btn.addEventListener("click", () => {
+      activeChip = btn.dataset.key;
+      renderChips();
+      render();
+    });
+  });
+}
+
+function renderTips(){
+  tipsGrid.innerHTML = TIPS.map(([title, body]) => `
+    <div class="tip">
+      <h4>◆ ${escapeHtml(title)}</h4>
+      <p>${escapeHtml(body)}</p>
+    </div>
+  `).join("");
+}
+
+searchInput.addEventListener("input", e => {
+  query = e.target.value;
+  render();
+});
+
+clearBtn.addEventListener("click", () => {
+  query = "";
+  searchInput.value = "";
+  searchInput.focus();
+  render();
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key === "/" && document.activeElement !== searchInput){
+    e.preventDefault();
+    searchInput.focus();
+  }
+});
+
+renderChips();
+renderTips();
+render();
+</script>
+</body>
+</html>
